@@ -1,0 +1,79 @@
+# dsh-file-link-menu
+
+Right-click menus for files and links in the DSH Web UI (中文说明见 [README.zh.md](README.zh.md)).
+
+## What it does
+
+Right-click a file chip, a delivered file card, an inline path in an answer, or an external link, and the menu offers the actions that surface actually supports:
+
+| Target | Rows |
+| --- | --- |
+| File (delivered card, produced chip, inline path mention) | Open file (default application) · Open in VS Code · Open with ▸ (probed applications) · Save as… · Copy file path · Reveal in file manager |
+| External link (`http`/`https` anchor, or a selected bare URL) | Open in new tab · Open in default browser · Copy link · Save link as… |
+
+Every row is composed from what the Host reports it can do (`GET /api/dsh-file-link-menu/caps`), so a Host without a desktop session hides the launch rows instead of offering rows that fail.
+
+An attachment card — the one the transcript draws for a sent file, and the one the composer shows for a pending file — behaves the same way: a left click previews the file in the right Sidebar, and a right click opens the same file rows. The card carries the file's display name and nothing else, so the Host resolves that name against dsh's attachment store, whose files are content-addressed and live outside every workspace. Name resolution is not exact when one name was attached twice: the most recently written file wins.
+
+An `@` reference the user wrote renders as a file chip in a sent message, and that chip takes the same rows on right click. Its own left click stays the shell's — except for a pasted file: `dsh-auto-paste` references one by its file name (`paster-…`) rather than by its long stored path, so the name is not a path at all, and this plugin resolves it against the attachment store and previews it in the right Sidebar itself.
+
+## Install
+
+```sh
+dsh plugin --profile web add /path/to/dsh-file-link-menu
+```
+
+Restart `dsh web` (or the application wrapper hosting it) and reload the page.
+
+## How it works, and what it assumes
+
+The web client slot map has no file or link menu hole, so this plugin cannot contribute rows into the shell's own menus. It therefore watches `contextmenu` (for the menu) and `click` (for the attachment preview) in the capture phase, and recognizes a target from anchors the shell publishes:
+
+- `[data-presented-files-row]` — delivered file cards, path on the chip's `title`;
+- `[data-produced-files-row]` — produced file chips, same `title` convention;
+- a `button[title]` carrying a path-shaped title **and** an accessible label — the inline path mention;
+- a `button[data-ref-chip="file"]` whose `title` is the whole `@` reference token (`@path`, or `@"path with spaces"`) — a reference the user wrote, rendered in a sent message. A token carrying a paste name (`paster-…`, the name `dsh-auto-paste` gives a paste) is an attachment reference, not a path: the Host resolves it against the attachment store;
+- `a[href]` whose authored value is an absolute `http(s)` URL;
+- `[data-message-attachments]` — the transcript's attachment row, whose card carries the attachment's display name on `title`;
+- the composer's pending-attachment rail: the labelled `role="group"` group whose items hold the card that carries the same `title`.
+
+Anything else — including same-page and relative links — keeps the shell's own menu, and so does any event a previous listener already claimed. The composer rail is styled by CSS modules, so its class names carry a build-hashed prefix; the plugin matches the local name at the end of the class list, which a rebuild keeps.
+
+**Anchor failure costs the affected surface only.** If a future DSH release renames these anchors, `detectTarget` stops recognizing that surface and the shell's menu opens as before; no Session data is touched. The anchors and their failure mode live in `src/client/surfaces.ts`.
+
+## Host routes
+
+| Route | Method | Purpose |
+| --- | --- | --- |
+| `/api/dsh-file-link-menu/caps` | GET | platform, file-manager flavour, launchable applications |
+| `/api/dsh-file-link-menu/attachment` | POST | resolve an attached file's display name to its stored path |
+| `/api/dsh-file-link-menu/open` | POST | open a Session file with the default application |
+| `/api/dsh-file-link-menu/reveal` | POST | select a Session file in the file manager |
+| `/api/dsh-file-link-menu/open-with` | POST | open a Session file with one probed application |
+| `/api/dsh-file-link-menu/download` | GET | stream a Session file as an attachment |
+| `/api/dsh-file-link-menu/save-as` | POST | copy a Session file into a chosen directory |
+| `/api/dsh-file-link-menu/open-url` | POST | hand a URL to the default browser |
+| `/api/dsh-file-link-menu/download-link` | GET | stream a remote URL as an attachment |
+| `/api/dsh-file-link-menu/save-link-as` | POST | write a remote URL into a chosen directory |
+
+Guarantees the routes enforce:
+
+- every route asks the composition's `connection` service for a Host/Origin and authentication rejection first;
+- a requested path must land inside one of two roots the Host itself names, **after symlinks are followed**: the Session workspace, which relative paths resolve against, and dsh's attachment store. The store is a root because a pasted attachment lives outside every workspace and its card carries only the file name, which the `/attachment` route turns back into one of the store's own paths. A path outside both roots, a URL-shaped value, a missing file, a relative path with no resolvable workspace, or an attachment name the store does not hold is refused, so the menu cannot become an arbitrary-file read or open primitive;
+- commands are argv arrays passed to `spawn` without a shell;
+- `链接另存为` accepts `http`/`https` only, re-validates every redirect hop, refuses loopback and private-network destinations, and caps both time and bytes. That refusal belongs to the routes where the **Host itself** connects. `在外部浏览器中打开` instead hands the URL to the user's own browser, which is reachability the page already has — the adjacent `在新标签页中打开` row opens the same address with no Host round trip at all — so a loopback or intranet address is allowed there, and the user's local dashboard opens like any other link.
+
+## Configuration
+
+None. The size, timeout, and redirect ceilings are protocol limits in `src/shared.ts`, not deployment choices.
+
+## Development
+
+```sh
+pnpm install
+pnpm run typecheck
+pnpm test
+pnpm run build
+```
+
+`lib/index.js` is the Host half; `lib/client.js` is the browser bundle the shell's module loader registers as `dsh-file-link-menu`.

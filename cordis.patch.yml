@@ -1,0 +1,12 @@
+# dsh-file-link-menu adds a right-click menu for files and links to the
+# existing Web UI. It disables nothing: the official deliverable cards, the
+# Session header, and every other plugin keep their rows.
+#
+# The mouse menus themselves cannot be contributed through a slot — the client
+# slot map has no file/link menu hole — so the browser half watches
+# `contextmenu` in the capture phase, claims only the anchors it recognizes
+# (declared file rows, inline path mentions, external links), and lets every
+# other event through to the shell's own menus.
+- insert:
+    - id: file-link-menu
+      name: dsh-file-link-menu
