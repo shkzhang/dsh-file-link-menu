@@ -52,9 +52,10 @@ dsh plugin --profile web add github:shkzhang/dsh-file-link-menu
 Restart `dsh web` (or the application wrapper hosting it) and reload the page.
 
 The npm package and the repository both ship the built `lib/`, so neither path
-builds on your machine. Installing from the repository by source checkout
-instead of by git spec runs `prepare`, which lives in this repository and needs
-nothing outside it.
+builds on your machine. A source checkout is the same: the repository keeps its
+build output committed, so nothing runs at install time and no build approval is
+asked for. `prepublishOnly` rebuilds `lib/` from the sources only when the
+package is published, so a release can never ship stale artifacts.
 
 ## How it works, and what it assumes
 

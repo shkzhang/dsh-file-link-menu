@@ -61,6 +61,46 @@ const MESSAGE_ATTACHMENTS = '[data-message-attachments]'
  */
 export const FULL_PATH_ATTR = 'data-flm-full-path'
 
+/** `Node.TEXT_NODE`, inlined so this module reads no DOM global. */
+const TEXT_NODE = 3
+
+/** `Node.ELEMENT_NODE`, inlined for the same reason. */
+const ELEMENT_NODE = 1
+
+/**
+ * The text a chip displays, EXCLUDING artwork drawn inside it.
+ *
+ * `textContent` recurses into the whole subtree, so it reads an SVG's drawn
+ * content too — and four pieces of DSH's file-type artwork paint their label
+ * with an SVG `<text>` element (`.css` draws the literal letters `CSS`, and
+ * `.env`, `.ini`, and `objective-c` do the same). Read that way, a chip
+ * carrying such a glyph yields the label glued to the path, which still reads
+ * as a path, so the display layer writes it back: the chip grows by one copy of
+ * the label every pass, without bound.
+ *
+ * Content inside an `<svg>` is a picture of text, never the document's text, so
+ * no SVG subtree contributes here. That rule is about HTML, not about this
+ * plugin's own markup, which is why nothing here needs to know which glyphs
+ * exist; the rest of the tree is walked, because a produced chip's name
+ * legitimately lives in a `<span>` beside its glyph.
+ * @param element - the chip control.
+ * @returns the concatenated text outside every SVG, trimmed.
+ */
+export function chipTextOf(element: Element): string {
+  let text = ''
+  for (const node of element.childNodes) {
+    if (node.nodeType === TEXT_NODE) {
+      text += node.nodeValue ?? ''
+      continue
+    }
+    if (node.nodeType !== ELEMENT_NODE) continue
+    const child = node as Element
+    if (child.tagName.toLowerCase() === 'svg') continue
+    text += chipTextOf(child)
+  }
+  return text.trim()
+}
+
 /**
  * Whether one element's class attribute holds a class whose local name ends
  * with this suffix.
@@ -279,10 +319,12 @@ function toolTargetOf(node: Element | null): MenuTarget | undefined {
   const stamped = button.getAttribute(FULL_PATH_ATTR)
   // A tool button publishes no `title`: its path is the button's own text until
   // the display layer shortens it, and the stamp is what remains authoritative
-  // afterwards.
+  // afterwards. The text is read as text NODES because a glyph drawn inside the
+  // chip contributes letters of its own — the `.css` artwork literally paints
+  // `CSS` with an SVG `<text>` element — and those letters are not a path.
   const path = stamped !== null && stamped !== ''
     ? stamped
-    : (button.textContent ?? '').trim()
+    : chipTextOf(button)
   // An untouched chip carries the path as its text, where a separator is
   // required so a path-shaped word in prose never becomes a file target.
   if (!looksLikePath(path)) return undefined

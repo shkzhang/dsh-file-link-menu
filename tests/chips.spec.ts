@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   CHIP_SELECTOR, ENHANCED_ATTR, ICON_ATTR, ICON_PATH_ATTR, displayNameOf, recognizeChip, scopeIconIds,
 } from '../src/client/chips.ts'
-import { FULL_PATH_ATTR } from '../src/client/surfaces.ts'
+import { FULL_PATH_ATTR, chipTextOf, detectTarget } from '../src/client/surfaces.ts'
 import { attachChipEnhancement, type ChipEnhancement } from '../src/client/enhance.ts'
 
 /** Build one element tree from HTML and return the deepest element. */
@@ -30,6 +30,28 @@ function stubGlyph(): (path: string) => Element | null {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     svg.setAttribute(ICON_ATTR, '')
     svg.setAttribute('data-type', path.slice(path.lastIndexOf('.') + 1))
+    return svg
+  }
+}
+
+/**
+ * A glyph builder whose artwork paints a label as an SVG `<text>` element.
+ *
+ * Four of the harness's own file-type artworks do exactly this — `.css` draws
+ * the literal letters `CSS`, and `.env`, `.ini`, and `objective-c` do the same
+ * — so a stub with no text node cannot stand in for them. `textContent` reads
+ * that label as if it were part of the chip's own text, which is what made a
+ * `.css` chip grow without bound.
+ * @param label - the letters the artwork paints.
+ * @returns a glyph builder emitting that label.
+ */
+function stubTextGlyph(label: string): (path: string) => Element | null {
+  return () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.setAttribute(ICON_ATTR, '')
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+    text.textContent = label
+    svg.append(text)
     return svg
   }
 }
@@ -368,5 +390,105 @@ describe('glyph follows the file type', () => {
     expect(button.querySelector(`[${ICON_ATTR}]`)?.getAttribute('data-type')).toBe('md')
     expect(button.textContent).toBe('notes.md')
     enhancement.dispose()
+  })
+})
+
+describe('glyphs that paint their label as text', () => {
+  /**
+   * `.css`, `.env`, `.ini`, and `objective-c` artwork draws its letters with an
+   * SVG `<text>` element. `textContent` reads those letters as part of the
+   * chip's own text, and the letters still look like a path, so the layer wrote
+   * them back — adding one more copy every pass. These cases pin the chip to a
+   * fixed value across many passes.
+   */
+  const CSS_PATH = 'plugins/dsh-desktop-assist/src/client/sidebar/Rows.module.css'
+
+  it('does not grow a chip whose glyph paints letters', async () => {
+    const host = document.createElement('div')
+    host.setAttribute('data-chat-flow', '')
+    host.innerHTML = `<div data-tool="read"><button class="X_fileLink">${CSS_PATH}</button></div>`
+    document.body.append(host)
+    const enhancement = attach(stubTextGlyph('CSS'))
+    await settle()
+
+    const button = host.querySelector('button') as HTMLButtonElement
+    const first = chipTextOf(button)
+    expect(first).toBe('Rows.module.css')
+
+    // Several more passes: any write-back would show up as growth here.
+    for (let pass = 0; pass < 5; pass += 1) {
+      enhancement.scan()
+      await settle()
+    }
+    expect(chipTextOf(button)).toBe(first)
+    expect(button.getAttribute(FULL_PATH_ATTR)).toBe(CSS_PATH)
+    enhancement.dispose()
+  })
+
+  it('reads the path from text nodes, never from a glyph subtree', () => {
+    // A tool card, because recognition keys off the card the chip sits in.
+    const card = document.createElement('div')
+    card.setAttribute('data-tool', 'read')
+    const button = document.createElement('button')
+    button.className = 'X_fileLink'
+    button.append(document.createTextNode(CSS_PATH))
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+    text.textContent = 'CSS'
+    svg.append(text)
+    button.prepend(svg)
+    card.append(button)
+
+    // The DOM trap this fix closes: `textContent` disagrees with the text the
+    // chip actually carries, and only the latter is its own text.
+    expect(button.textContent).toContain('CSS')
+    expect(chipTextOf(button)).toBe(CSS_PATH)
+    expect(recognizeChip(button)?.path).toBe(CSS_PATH)
+  })
+
+  it('names the file, not the glyph label', async () => {
+    const host = document.createElement('div')
+    host.setAttribute('data-chat-flow', '')
+    document.body.append(host)
+    for (const [ext, label] of [['css', 'CSS'], ['env', '.ENV'], ['ini', 'INI']]) {
+      host.innerHTML = `<div data-tool="read"><button class="X_fileLink">src/a/b/config.${ext}</button></div>`
+      const enhancement = attach(stubTextGlyph(label))
+      await settle()
+      const button = host.querySelector('button') as HTMLButtonElement
+      expect(chipTextOf(button)).toBe(`config.${ext}`)
+      enhancement.dispose()
+    }
+  })
+
+  it('keeps the menu acting on the real path after the glyph is stamped', async () => {
+    const host = document.createElement('div')
+    host.setAttribute('data-chat-flow', '')
+    host.innerHTML = `<div data-tool="read"><button class="X_fileLink">${CSS_PATH}</button></div>`
+    document.body.append(host)
+    const enhancement = attach(stubTextGlyph('CSS'))
+    await settle()
+
+    const button = host.querySelector('button') as HTMLButtonElement
+    expect(detectTarget(button)).toEqual({ kind: 'file', path: CSS_PATH, source: 'tool' })
+    enhancement.dispose()
+  })
+
+  it('resolves an untouched chip past the label its glyph paints', () => {
+    // No enhancement pass runs here: the chip is the shell's own markup, with
+    // our stamp absent and a text-painting glyph already inside it, which is
+    // what the menu sees on a page where the display layer never applied.
+    const card = document.createElement('div')
+    card.setAttribute('data-tool', 'read')
+    const button = document.createElement('button')
+    button.className = 'X_fileLink'
+    button.append(document.createTextNode(CSS_PATH))
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+    text.textContent = 'CSS'
+    svg.append(text)
+    button.prepend(svg)
+    card.append(button)
+
+    expect(detectTarget(button)).toEqual({ kind: 'file', path: CSS_PATH, source: 'tool' })
   })
 })

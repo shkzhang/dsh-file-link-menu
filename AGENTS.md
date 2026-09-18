@@ -17,8 +17,11 @@
 2. **完整路径必须留在元素上**（`data-flm-full-path`）。官方的 chip 文本本来就是路径，缩短之后文本不再能反推出路径，菜单与后续 pass 都只认这个戳；`surfaces.ts` 的 `chipPathOf` 先读戳再读文本。**改动这里必须同时检查 `toolTargetOf` 的用例**，否则菜单会去开错文件。
 3. **必须能分辨"自己写的名字"与"shell 之后覆写的文本"**：React 在 prop 变化时会重建按钮的子节点，流式调用每帧都在变。所以记录 `data-flm-shown`，两者不一致即以可见文本为准重算（`chips.ts` 的 `pathOf`）。去掉这个判断会让 chip 永久显示上一个文件名。
 4. **id 按实例追加后缀，不替换**：同一份图形里可能有多个 `dsh-code-icon-*` id，形状用 `url(#…)` 分别引用；替换成同一个值会打断其中一部分填充。`useId` 在复用的渲染 root 里每次返回同一个值，所以按类型缓存必须配实例后缀（`scopeIconIds`）。
-5. **每一趟都必须收敛**：已经带图标、已缩短、已记录名字的 chip 不再改写，否则观察器会被自己的写入反复唤醒。
-6. **失败退化为官方渲染**：拿不到图标、算不出名字、识别不了的 chip，保持原样，绝不抛错。
+5. **读 chip 文本一律用 `chipTextOf`，绝不用 `textContent`。** `textContent` 会递归读进 `<svg>` 子树，而 DSH 有四份图形用 SVG `<text>` 把字母画出来：`.css` 画 `CSS`、`.env` 画 `.ENV`、`.ini` 画 `INI`、`objective-c`（`.m`/`.mm`）画 `OC`。读到的字符串是「字母 + 路径」，末尾仍是合法扩展名，于是被当成更长的路径写回去——**每趟加一份字母，无上限增长**（0.1.0 的真实缺陷，见 `chipTextOf` 的注释）。判据是 HTML 的通用规则「`<svg>` 里是图形不是文本」，不是「跳过某个图标」，所以新增图标不会重新引入它。
+6. **每一趟都必须收敛**：已经带图标、已缩短、已记录名字的 chip 不再改写，否则观察器会被自己的写入反复唤醒。
+7. **失败退化为官方渲染**：拿不到图标、算不出名字、识别不了的 chip，保持原样，绝不抛错。
+
+改这一层后必须跑 `tests/chips.spec.ts`；其中「glyphs that paint their label as text」一组用带 `<text>` 的图形覆盖第 5 条，新增此类图形时应照着扩展它。
 
 ## 安全红线
 
@@ -33,5 +36,6 @@
 - **粘贴引用的命名约定**：`dsh-auto-paste` 把粘贴文件命名成 `paster-<时间戳>.txt`，并在消息里按**文件名**（而不是那条很长的仓库路径）引用它；本插件按 `paster-` 前缀把该引用认成附件（`surfaces.ts` 的 `isPasteName`），再经 `/attachment` 路由回查仓库——所以它的左键由本插件接管（那个名字照工作区相对路径解析必然失败）。改前缀要同时改两个插件。
 - 菜单项按 `caps` 能力组合，不做"点了必然失败"的项；失败以 Toast 反馈，错误码到文案的映射集中在 `src/client/FileLinkMenu.tsx` 的 `ERROR_KEYS`。
 - 验证链：`pnpm run typecheck` → `pnpm test` → `pnpm run build` → `dsh plugin --profile web add <本仓库路径>` 后在真实界面确认（效果由用户确认，不要自己截图）。
-- **本仓库是独立仓库，必须自包含**：`tsconfig.json` 与 `vitest.config.ts` 不得 `extends`/`import` 仓库外的文件，否则 `pnpm run prepare` 会在 `dsh plugin add` 与 npm 安装时失败。要验证这一点，把仓库复制到一个空目录（不含 node_modules）后跑 `pnpm install --frozen-lockfile --ignore-scripts && pnpm run build`。
+- **本仓库是独立仓库，必须自包含**：`tsconfig.json` 与 `vitest.config.ts` 不得 `extends`/`import` 仓库外的文件，否则发布时的 `prepublishOnly` 构建会失败。要验证这一点，把仓库复制到一个空目录（不含 node_modules）后跑 `pnpm install --frozen-lockfile --ignore-scripts && pnpm run build`。
+- **构建钩子只用 `prepublishOnly`，不要用 `prepare`**：`prepare` 会在每次安装后执行，而 pnpm ≥10 要求安装者先 `allowBuilds` 授权，否则报 `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`；本仓库已提交 `lib/`，安装时无物可构建。改回 `prepare` 会让 `dsh plugin add` 在用户机器上失败。
 - 官方 `@deepseek-ai/*` 依赖用 `peerDependencies` 声明；范围必须带显式的预发布分支（如 `>=0.1.5-rc.1 <0.1.6 || >=0.1.6-alpha.1 <0.2.0-0`），否则 node-semver 会静默排除 harness 的预发布构建，用户安装时报 `ERESOLVE`。

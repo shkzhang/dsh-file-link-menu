@@ -59,6 +59,26 @@ export type MenuTarget = {
  */
 export declare const FULL_PATH_ATTR = "data-flm-full-path";
 /**
+ * The text a chip displays, EXCLUDING artwork drawn inside it.
+ *
+ * `textContent` recurses into the whole subtree, so it reads an SVG's drawn
+ * content too — and four pieces of DSH's file-type artwork paint their label
+ * with an SVG `<text>` element (`.css` draws the literal letters `CSS`, and
+ * `.env`, `.ini`, and `objective-c` do the same). Read that way, a chip
+ * carrying such a glyph yields the label glued to the path, which still reads
+ * as a path, so the display layer writes it back: the chip grows by one copy of
+ * the label every pass, without bound.
+ *
+ * Content inside an `<svg>` is a picture of text, never the document's text, so
+ * no SVG subtree contributes here. That rule is about HTML, not about this
+ * plugin's own markup, which is why nothing here needs to know which glyphs
+ * exist; the rest of the tree is walked, because a produced chip's name
+ * legitimately lives in a `<span>` beside its glyph.
+ * @param element - the chip control.
+ * @returns the concatenated text outside every SVG, trimmed.
+ */
+export declare function chipTextOf(element: Element): string;
+/**
  * The attachment name one card or reference carries, when it is an attachment.
  *
  * Three surfaces draw one: the transcript's attachment row, the composer's

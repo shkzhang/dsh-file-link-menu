@@ -25,7 +25,7 @@
  * Recognition is narrow on purpose — a chip this module does not recognize
  * keeps the shell's own rendering exactly.
  */
-import { FULL_PATH_ATTR, isPasteName, looksLikePath, referencePathOf } from './surfaces.ts'
+import { FULL_PATH_ATTR, chipTextOf, isPasteName, looksLikePath, referencePathOf } from './surfaces.ts'
 
 /** Ids the code artwork bakes into its gradients and clip paths. */
 const ICON_ID_TOKEN = /dsh-code-icon-[A-Za-z0-9]+/gu
@@ -168,7 +168,10 @@ function pathOf(element: HTMLElement, shape: ChipShape): string | undefined {
     return hasSeparator(token) || looksLikePath(token) ? token : undefined
   }
   const title = (element.getAttribute('title') ?? '').trim()
-  const text = (element.textContent ?? '').trim()
+  // Read as text NODES, never `textContent`: a glyph drawn inside the chip
+  // contributes letters of its own (`chipTextOf` explains the runaway this
+  // caused), and those letters must never be mistaken for the path.
+  const text = chipTextOf(element)
   const stamped = element.getAttribute(FULL_PATH_ATTR)
   const shown = element.getAttribute(SHOWN_NAME_ATTR)
   // The shell rewrote this chip's text after this layer shortened it — React

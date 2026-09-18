@@ -1,6 +1,6 @@
 {
   "name": "dsh-file-link-menu",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Right-click menus for files and links in the DSH Web UI, plus file-type glyphs and short names on conversation path chips",
   "type": "module",
   "main": "lib/index.js",
