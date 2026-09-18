@@ -44,7 +44,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "prepare": "node scripts/build.mjs",
+    "prepublishOnly": "node scripts/build.mjs",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check": "pnpm run typecheck && pnpm run test && pnpm run build"
