@@ -49,6 +49,16 @@ export type MenuTarget = {
     readonly source: 'attachment';
 };
 /**
+ * Attribute the display layer stamps on a chip it shortened, carrying the full
+ * path that chip still stands for.
+ *
+ * It lives here because this module owns the anchor vocabulary, and because it
+ * is what keeps the two layers honest about each other: a shortened chip's
+ * visible text is a file name, so every path read must come from the stamp
+ * instead. `enhance.ts` writes it, `chips.ts` and this module read it.
+ */
+export declare const FULL_PATH_ATTR = "data-flm-full-path";
+/**
  * The attachment name one card or reference carries, when it is an attachment.
  *
  * Three surfaces draw one: the transcript's attachment row, the composer's

@@ -51,6 +51,17 @@ const PRODUCED_ROW = '[data-produced-files-row]'
 const MESSAGE_ATTACHMENTS = '[data-message-attachments]'
 
 /**
+ * Attribute the display layer stamps on a chip it shortened, carrying the full
+ * path that chip still stands for.
+ *
+ * It lives here because this module owns the anchor vocabulary, and because it
+ * is what keeps the two layers honest about each other: a shortened chip's
+ * visible text is a file name, so every path read must come from the stamp
+ * instead. `enhance.ts` writes it, `chips.ts` and this module read it.
+ */
+export const FULL_PATH_ATTR = 'data-flm-full-path'
+
+/**
  * Whether one element's class attribute holds a class whose local name ends
  * with this suffix.
  *
@@ -214,6 +225,24 @@ function chipOf(node: Element | null): HTMLElement | undefined {
 }
 
 /**
+ * The full path one chip control stands for, read from the stamps the shell
+ * and the display layer publish.
+ *
+ * The stamp is read BEFORE `title`: `title` holds the author's path for every
+ * shape here, while the stamp is what the display layer leaves on a chip whose
+ * visible text it replaced with a file name. A shortened chip's text is a name,
+ * and acting on it would resolve a different file or none at all.
+ * @param control - the path-carrying button.
+ * @returns the full path, or undefined when the control publishes none.
+ */
+function stampedPathOf(control: HTMLElement): string | undefined {
+  const stamped = control.getAttribute(FULL_PATH_ATTR)
+  if (stamped !== null && stamped !== '') return stamped
+  const title = control.title.trim()
+  return title !== '' && looksLikePath(title) ? title : undefined
+}
+
+/**
  * The file chip under one element, when it is a declared, mentioned, or
  * referenced path.
  */
@@ -223,8 +252,8 @@ function fileTargetOf(node: Element | null): MenuTarget | undefined {
   // A rendered `@` reference keeps the whole token on its `title`, so its target
   // is read out of the token; `data-ref-chip` is what marks it as one.
   if (chip.dataset.refChip === 'file') return chipTargetOf(node)
-  const path = chip.title.trim()
-  if (!looksLikePath(path)) return undefined
+  const path = stampedPathOf(chip)
+  if (path === undefined) return undefined
   if (chip.closest(PRESENTED_ROW) !== null) return { kind: 'file', path, source: 'presented' }
   if (chip.closest(PRODUCED_ROW) !== null) return { kind: 'file', path, source: 'produced' }
   // Inline mentions are the only remaining `button[title]` the renderer builds
@@ -238,17 +267,28 @@ function fileTargetOf(node: Element | null): MenuTarget | undefined {
  *
  * A bare basename is deliberately not enough here: the Host resolves a
  * relative path against the workspace root, and resolving an ambiguous
- * basename could open a different file than the card shows.
+ * basename could open a different file than the card shows. A chip the display
+ * layer shortened is exempt from that rule — its stamp is the author's own
+ * path, so there is nothing ambiguous left to resolve.
  */
 function toolTargetOf(node: Element | null): MenuTarget | undefined {
   const card = node?.closest('[data-tool]')
   if (card == null) return undefined
   const button = node?.closest('button')
   if (button == null || !card.contains(button)) return undefined
-  const path = (button.textContent ?? '').trim()
-  // The tool surface carries the path as text, so a separator is required
-  // here: a path-shaped word in prose must not become a file target.
-  if (!path.includes('/') || !looksLikePath(path)) return undefined
+  const stamped = button.getAttribute(FULL_PATH_ATTR)
+  // A tool button publishes no `title`: its path is the button's own text until
+  // the display layer shortens it, and the stamp is what remains authoritative
+  // afterwards.
+  const path = stamped !== null && stamped !== ''
+    ? stamped
+    : (button.textContent ?? '').trim()
+  // An untouched chip carries the path as its text, where a separator is
+  // required so a path-shaped word in prose never becomes a file target.
+  if (!looksLikePath(path)) return undefined
+  if (stamped === null || stamped === '') {
+    if (!path.includes('/')) return undefined
+  }
   return { kind: 'file', path, source: 'tool' }
 }
 

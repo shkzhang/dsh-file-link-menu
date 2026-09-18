@@ -1,20 +1,25 @@
 /**
- * Browser half of dsh-file-link-menu: register the bilingual dictionaries and
- * the overlay contribution that owns the right-click menu.
+ * Browser half of dsh-file-link-menu: register the bilingual dictionaries, the
+ * overlay contribution that owns the right-click menu, and the display layer
+ * that re-dresses every path chip in the conversation.
  *
- * The contribution renders no visible chrome; it is the lifecycle host for the
- * capture-phase `contextmenu` and `click` listeners, the portaled menu, and the
- * attachment preview, so the plugin gains both without claiming any slot a
- * feature already occupies.
+ * The overlay contribution renders no visible chrome; it is the lifecycle host
+ * for the capture-phase `contextmenu` and `click` listeners, the portaled menu,
+ * and the attachment preview, so the plugin gains both without claiming any
+ * slot a feature already occupies. The display layer is installed on the same
+ * axis: one effect, disposed with the plugin.
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { FileLinkMenuController } from './controller.ts'
+import { attachChipEnhancement } from './enhance.ts'
+import { createIconFactory } from './icons.ts'
 import { FileLinkMenuSurface, type FileLinkMenuInjected } from './FileLinkMenu.tsx'
 import { en, NS, zh } from './locales.ts'
 import { previewFileInSidebar, type SidebarRightService } from './preview.ts'
+import './chips.module.css'
 
 /** Required services for locale registration and the overlay contribution. */
 export const inject = ['slots', 'locale']
@@ -66,6 +71,13 @@ export function apply(ctx: ClientContext): void {
   try {
     const controller = new FileLinkMenuController()
     ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-file-link-menu: dictionaries')
+    // The display layer, on the plugin's own lifecycle axis: it stops watching
+    // when the plugin unloads, and every chip it re-dressed keeps the rendering
+    // the shell gives back on the next commit.
+    ctx.effect(
+      () => attachChipEnhancement(createIconFactory()).dispose,
+      'dsh-file-link-menu: path chips',
+    )
     // The composer's overlay anchor, not the Session header: the header is not
     // rendered while a Session has no messages yet, and that is exactly the
     // Session whose composer holds a freshly attached file. Both the menu and

@@ -1,0 +1,39 @@
+/* The stamped file-type glyph.
+   Attribute selectors only: the build's CSS-modules step rewrites `.class`
+   names, and this sheet has no class to rewrite — every rule is keyed off the
+   attributes the enhancement layer stamps, which are the layer's own contract.
+   Every rule is scoped to a re-dressed chip, so a chip this plugin did not
+   touch keeps the shell's rendering exactly. */
+
+/* The shell's own chip glyph, beside the type glyph this layer stamps. It is
+   hidden rather than removed: React still owns that node, and taking it out of
+   the tree would leave the virtual DOM and the document disagreeing. */
+[data-flm-enhanced] > svg:not([data-flm-icon]),
+[data-flm-enhanced] > span > svg:not([data-flm-icon]) {
+  display: none;
+}
+
+/* The stamped glyph.
+   `1em` rides the chip's own font size, which each surface sets for itself (a
+   row's path link, an inline mention's code size). The offset seats its optical
+   center on the text's baseline for the surfaces that lay a chip out as inline
+   flow; a chip whose own rule is flex centers it through `align-items` and
+   ignores this. */
+[data-flm-icon] {
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.18em;
+}
+
+/* Spacing belongs to the chip, not to the glyph: a produced chip is inline-flex
+   with its own `gap`, while a tool path link and an inline mention are plain
+   inline flow where the two would otherwise touch. */
+[data-flm-enhanced] > [data-flm-icon] {
+  margin-right: 5px;
+}
+
+/* An inline-flex chip already separates its children with `gap`. */
+[data-produced-files-row] [data-flm-icon] {
+  margin-right: 0;
+}

@@ -63,9 +63,23 @@ describe('detectTarget', () => {
     expect(detectTarget(node)).toEqual({ kind: 'file', path: '.tmp/iclr-table-references/asid-08.png', source: 'tool' })
   })
 
-  it('leaves a basename-only tool argument alone', () => {
+  it('leaves an unstamped basename-only tool argument alone', () => {
+    // A bare name with no stamp is not something the Host can resolve against
+    // the workspace root without risking a different file than the row shows.
     const node = deepest('<div data-tool="read"><div><button class="JXwHVq_fileLink">AGENTS.md</button></div></div>')
     expect(detectTarget(node)).toBeUndefined()
+  })
+
+  it('claims a tool chip the display layer shortened, through its stamp', () => {
+    // The visible text is a name by then; acting on it would resolve the wrong
+    // file, so the stamp the display layer left is the only honest source.
+    const node = deepest('<div data-tool="read"><div><button class="JXwHVq_fileLink" data-flm-full-path="docs/guide/AGENTS.md" data-flm-shown="AGENTS.md">AGENTS.md</button></div></div>')
+    expect(detectTarget(node)).toEqual({ kind: 'file', path: 'docs/guide/AGENTS.md', source: 'tool' })
+  })
+
+  it('claims a shortened mention through its stamp', () => {
+    const node = deepest('<p><code><button class="fileMention" title="/w/src/deep/a.ts" aria-label="open" data-flm-full-path="/w/src/deep/a.ts">a.ts</button></code></p>')
+    expect(detectTarget(node)).toEqual({ kind: 'file', path: '/w/src/deep/a.ts', source: 'mention' })
   })
 
   it('leaves a tool card control alone', () => {
