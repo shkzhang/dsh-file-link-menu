@@ -27,7 +27,9 @@
     "README.md",
     "README.zh.md",
     "AGENTS.md",
-    "LICENSE"
+    "LICENSE",
+    "assets/*.png",
+    "screenshots.json"
   ],
   "repository": {
     "type": "git",

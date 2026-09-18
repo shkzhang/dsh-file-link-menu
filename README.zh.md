@@ -11,13 +11,30 @@
 | 文件（交付卡片 / 产物 chip / 内联路径） | 打开文件（系统默认应用）· 在 VS Code 中打开 · 打开方式 ▸（已探测到的应用）· 另存为… · 复制文件路径 · 在文件管理器中显示 |
 | 外部链接（`http`/`https` 锚点或选中的裸 URL） | 在新标签页中打开 · 在外部浏览器中打开 · 复制链接 · 链接另存为… |
 
+<p align="center">
+  <img src="assets/menu-file.png" alt="文件菜单：打开文件、在 VS Code 中打开、打开方式、另存为、复制文件路径、在访达中显示" width="620">
+  <br>
+  <img src="assets/menu-link.png" alt="链接菜单：在新标签页中打开、在外部浏览器中打开、复制链接、链接另存为" width="620">
+</p>
+
 每一项都按宿主自报的能力组合（`GET /api/dsh-file-link-menu/caps`）：没有桌面会话的宿主会隐藏启动类菜单项，而不是给出必然失败的按钮。
 
 ### 路径 chip 显示类型图标与文件名
 
 对话里出现的路径——工具行的参数路径、回复里的内联路径、产物 chip、用户写的 `@` 引用——都会被改写成「文件类型图标 + 文件名」。完整路径不丢：它被记在元素上（`data-flm-full-path`），悬停可见，也是菜单所有动作真正操作的路径。
 
+<p align="center">
+  <img src="assets/tool-rows.png" alt="工具行：每条路径 chip 都以文件类型图标开头，只显示文件名" width="620">
+  <br>
+  <img src="assets/produced-files.png" alt="产物文件列表，chip 同样带文件类型图标" width="620">
+</p>
+
 图标用的是 DSH 自己的图形资源（共享 UI primitives 里的 `FileTypeIcon`），所以 `.tsx` chip 显示 React 原子、`.md` 显示 Markdown 标记，而未来 shell 新增的分类无需改本插件即可生效。插件识别不了的 chip——包括本来就画了图标和短名的交付卡片——完全保留官方渲染。
+
+<p align="center">
+  <img src="assets/chip-read.png" alt="单条读取行：类型图标、本地化标题与文件名" width="380">
+</p>
+
 
 附件卡片（对话里已发送的附件、输入框里待发送的附件）同样支持：左键在右侧边栏预览，右键给出与文件相同的菜单项。卡片上只有文件名、没有路径，因此由宿主把名字解析成附件仓库中的真实路径；仓库按内容寻址，所以重名时取最近写入的那一个。
 

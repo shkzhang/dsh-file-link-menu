@@ -11,13 +11,29 @@ Right-click a file chip, a delivered file card, an inline path in an answer, or 
 | File (delivered card, produced chip, inline path mention) | Open file (default application) · Open in VS Code · Open with ▸ (probed applications) · Save as… · Copy file path · Reveal in file manager |
 | External link (`http`/`https` anchor, or a selected bare URL) | Open in new tab · Open in default browser · Copy link · Save link as… |
 
+<p align="center">
+  <img src="assets/menu-file.png" alt="The file menu: open, open in VS Code, open with, save as, copy file path, reveal in file manager" width="620">
+  <br>
+  <img src="assets/menu-link.png" alt="The link menu: open in new tab, open in default browser, copy link, save link as" width="620">
+</p>
+
 Every row is composed from what the Host reports it can do (`GET /api/dsh-file-link-menu/caps`), so a Host without a desktop session hides the launch rows instead of offering rows that fail.
 
 ### Path chips show a type glyph and a file name
 
 A path the shell prints in the conversation — a tool row's argument path, an inline path in an answer, a produced-file chip, an `@` reference the user wrote — is re-dressed to lead with the file's type glyph and to show only the file's name. The full path stays on the chip: it is stamped on the element (`data-flm-full-path`), shown on hover, and it is what every menu action runs against.
 
+<p align="center">
+  <img src="assets/tool-rows.png" alt="Tool rows: each path chip leads with its file's type glyph and shows only the file name" width="620">
+  <br>
+  <img src="assets/produced-files.png" alt="A produced-files list whose chips carry the file-type glyph" width="620">
+</p>
+
 The glyph is DSH's own artwork, borrowed from the shared UI primitives, so a `.tsx` chip carries the React mark, a `.md` chip the Markdown mark, and a category a later shell release adds appears here without a change. A chip the plugin does not recognize — including the delivered file cards, which already draw both a glyph and a short name — keeps the shell's rendering exactly.
+
+<p align="center">
+  <img src="assets/chip-read.png" alt="A single read row: the type glyph, the localized title, and the file name" width="380">
+</p>
 
 An attachment card — the one the transcript draws for a sent file, and the one the composer shows for a pending file — behaves the same way: a left click previews the file in the right Sidebar, and a right click opens the same file rows. The card carries the file's display name and nothing else, so the Host resolves that name against dsh's attachment store, whose files are content-addressed and live outside every workspace. Name resolution is not exact when one name was attached twice: the most recently written file wins.
 
