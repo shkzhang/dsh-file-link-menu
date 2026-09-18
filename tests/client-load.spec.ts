@@ -20,10 +20,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement, type ReactNode } from 'react'
 
-// The suite runs both from the plugin directory and from the repository root.
-const pluginRoot = process.cwd().endsWith('dsh-file-link-menu')
-  ? process.cwd()
-  : join(process.cwd(), 'plugins/dsh-file-link-menu')
+// The vitest config sets `root` to the plugin directory, so the suite always
+// runs with the plugin as its working directory.
+const pluginRoot = process.cwd()
 const require = createRequire(join(pluginRoot, 'package.json'))
 
 /** Set by a spec to prove the render boundary swallows a primitive failure. */

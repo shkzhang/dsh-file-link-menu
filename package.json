@@ -1,7 +1,7 @@
 {
   "name": "dsh-file-link-menu",
   "version": "0.1.0",
-  "description": "Right-click menus for files and links in the DSH Web UI: open, open with, save as, copy path or link",
+  "description": "Right-click menus for files and links in the DSH Web UI, plus file-type glyphs and short names on conversation path chips",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -29,6 +29,17 @@
     "AGENTS.md",
     "LICENSE"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shkzhang/dsh-file-link-menu.git"
+  },
+  "homepage": "https://github.com/shkzhang/dsh-file-link-menu#readme",
+  "bugs": {
+    "url": "https://github.com/shkzhang/dsh-file-link-menu/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "prepare": "pnpm run build",
@@ -54,14 +65,15 @@
     "dsh-plugin",
     "context-menu",
     "files",
-    "links"
+    "links",
+    "file-icons"
   ],
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",
-    "@deepseek-ai/dsh-client-ui-conversation": ">=0.1.5-rc.1 <0.2.0",
-    "@deepseek-ai/dsh-client-ui-primitives": ">=0.1.5-rc.1 <0.2.0",
-    "@deepseek-ai/dsh-client-ui-slots": ">=0.1.5-rc.1 <0.2.0"
+    "@deepseek-ai/dsh-client-ui-conversation": ">=0.1.5-rc.1 <0.1.6 || >=0.1.6-alpha.1 <0.2.0-0",
+    "@deepseek-ai/dsh-client-ui-primitives": ">=0.1.5-rc.1 <0.1.6 || >=0.1.6-alpha.1 <0.2.0-0",
+    "@deepseek-ai/dsh-client-ui-slots": ">=0.1.5-rc.1 <0.1.6 || >=0.1.6-alpha.1 <0.2.0-0"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-client-ui-conversation": {

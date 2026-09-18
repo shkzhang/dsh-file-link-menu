@@ -1,6 +1,32 @@
 {
-  "extends": "../../tsconfig.base.json",
+  // Self-contained on purpose: this repository is installed and built on its
+  // own (`prepare` runs here), so it must not extend a config that lives
+  // outside it. The options below are the ones the sources actually rely on.
   "compilerOptions": {
+    "target": "es2024",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "sourceMap": true,
+    "declarationMap": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    // Sources import their neighbours by their real `.ts`/`.tsx` spelling, so
+    // the compile pass needs both halves of this pair: one lets the resolver
+    // accept a TypeScript extension in a specifier, the other rewrites it to
+    // `.js` in the emitted declarations so the published `.d.ts` files resolve
+    // for a consumer that never sees the sources.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": false,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node"],
     "composite": false,
     "incremental": false,
     "paths": {},
